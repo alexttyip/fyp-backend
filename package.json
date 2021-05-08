@@ -4,6 +4,10 @@
     "dev": "nodemon src/app.js",
     "start": "node src/app.js"
   },
+  "engines": {
+    "node": "16.x",
+    "yarn": "2.x"
+  },
   "dependencies": {
     "express": "^4.17.1"
   }
