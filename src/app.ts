@@ -14,12 +14,11 @@ const client = new mongodb.MongoClient(uri, {
   useUnifiedTopology: true,
 });
 
+await client.connect();
+console.log("Connected to MongoDB");
+
 app.get("/", async (req, res) => {
   try {
-    await client.connect();
-
-    console.log("Connected to MongoDB");
-
     const database = client.db("vmv");
     const voters = database.collection("voters");
     res.json(
