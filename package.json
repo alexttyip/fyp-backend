@@ -2,6 +2,7 @@
   "name": "vmv-android-server",
   "license": "UNLICENSED",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "nodemon src/app.js",
     "start": "node src/app.js",

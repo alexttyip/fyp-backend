@@ -1,7 +1,7 @@
-const express = require("express");
-const { MongoClient } = require("mongodb");
+import express from "express";
+import mongodb from "mongodb";
 
-require("dotenv").config();
+import "dotenv/config";
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -9,7 +9,7 @@ const port = process.env.PORT || 3000;
 const { DB_USER, DB_PW, CLUSTER_URL } = process.env;
 
 const uri = `mongodb+srv://${DB_USER}:${DB_PW}@${CLUSTER_URL}?retryWrites=true&w=majority`;
-const client = new MongoClient(uri, {
+const client = new mongodb.MongoClient(uri, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 });
