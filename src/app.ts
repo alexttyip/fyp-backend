@@ -1,7 +1,10 @@
-import express from "express";
-import mongodb from "mongodb";
-
 import "dotenv/config";
+
+import parse from "csv-parse";
+import express from "express";
+import formidable, { File } from "formidable";
+import * as fs from "fs";
+import mongodb from "mongodb";
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -15,12 +18,12 @@ const client = new mongodb.MongoClient(uri, {
 });
 
 await client.connect();
+const db = client.db("vmv");
 console.log("Connected to MongoDB");
 
 app.get("/", async (req, res) => {
   try {
-    const database = client.db("vmv");
-    const voters = database.collection("voters");
+    const voters = db.collection("voters");
     res.json(
       await voters
         .find(
@@ -33,9 +36,43 @@ app.get("/", async (req, res) => {
     );
   } catch (e) {
     console.log(e);
-  } finally {
-    await client.close();
   }
+});
+
+app.get("/upload", async (req, res) => {
+  const form = formidable.formidable();
+  let name: string;
+
+  const parser = parse({ columns: true }, async (err, records) => {
+    try {
+      const collection = db.collection(name);
+
+      await collection.drop(); // TODO only remove when indicated
+
+      const result = await collection.insertMany(records);
+
+      console.log(`Inserted ${result.insertedCount} docs`);
+
+      res.sendStatus(200);
+    } catch (e) {
+      console.log(e);
+
+      res.sendStatus(500);
+    }
+  });
+
+  form.parse(req, async (err, fields, files) => {
+    const { path, name: fooName } = files.data as File;
+
+    if (fooName == null || !fooName.endsWith(".csv")) {
+      res.sendStatus(400);
+      return;
+    }
+
+    name = fooName.slice(0, -4);
+
+    fs.createReadStream(path).pipe(parser);
+  });
 });
 
 app.listen(port, () => {
