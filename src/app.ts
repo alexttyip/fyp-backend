@@ -39,7 +39,7 @@ app.get("/", async (req, res) => {
   }
 });
 
-app.get("/upload", async (req, res) => {
+app.post("/upload", async (req, res) => {
   const form = formidable.formidable();
   let name: string;
 
@@ -47,7 +47,9 @@ app.get("/upload", async (req, res) => {
     try {
       const collection = db.collection(name);
 
-      await collection.drop(); // TODO only remove when indicated
+      if (name in db.listCollections()) {
+        await collection.drop(); // TODO only remove when indicated
+      }
 
       const result = await collection.insertMany(records);
 
