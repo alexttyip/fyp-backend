@@ -77,6 +77,42 @@ app.post("/upload", async (req, res) => {
   });
 });
 
+app.get("/vote-options", async (req, res) => {
+  try {
+    const options = db.collection("public-vote-options");
+    res.json(await options.find().toArray());
+  } catch (e) {
+    console.log(e);
+  }
+});
+
+app.post("/vote", async (req, res) => {
+  const form = formidable.formidable();
+
+  form.parse(req, async (err, fields) => {
+    const { vote = "" } = fields;
+
+    if (!vote) {
+      res.sendStatus(400);
+      return;
+    }
+
+    try {
+      const collection = db.collection("votes");
+
+      const result = await collection.insertOne({ vote });
+
+      console.log(`Inserted ${result.insertedCount} docs`);
+
+      res.sendStatus(200);
+    } catch (e) {
+      console.log(e);
+
+      res.sendStatus(500);
+    }
+  });
+});
+
 app.listen(port, () => {
   console.log(`Example app listening at http://localhost:${port}`);
 });
