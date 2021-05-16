@@ -1,91 +1,87 @@
 import "dotenv/config";
 
-import parse from "csv-parse";
 import express from "express";
-import formidable, { File } from "formidable";
-import * as fs from "fs";
-import mongodb from "mongodb";
+
+import * as myDb from "./db";
+import { get } from "./db";
+import uploadRouter from "./routers/upload";
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-const { DB_USER, DB_PW, CLUSTER_URL } = process.env;
+const PUBLIC_VOTERS_KEYS = "public-voters-keys";
 
-const uri = `mongodb+srv://${DB_USER}:${DB_PW}@${CLUSTER_URL}?retryWrites=true&w=majority`;
-const client = new mongodb.MongoClient(uri, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
+app.use("/upload", uploadRouter);
 
-await client.connect();
-const db = client.db("vmv");
-console.log("Connected to MongoDB");
+/* app.get("/drop", async (req, res) => {
+  const collections = [
+    "commitments-proofs-1",
+    "commitments-proofs-2",
+    "commitments-proofs-3",
+    "commitments-proofs-4",
+    "public-associated-voters",
+    "public-commitments-1",
+    "public-commitments-2",
+    "public-commitments-3",
+    "public-commitments-4",
+    "public-tracker-numbers",
+    "public-vote-options",
+    "public-voters",
+    "shuffled-tracker-numbers",
+    "votes",
+  ];
 
-app.get("/", async (req, res) => {
-  try {
-    const voters = db.collection("voters");
-    res.json(
-      await voters
-        .find(
-          {},
-          {
-            projection: { _id: 0, voter_id: 1 },
-          }
-        )
-        .toArray()
-    );
-  } catch (e) {
-    console.log(e);
-  }
-});
+  const existing = (await db.listCollections().toArray()).map(
+    (value) => value.name as String
+  );
 
-app.post("/upload", async (req, res) => {
-  const form = formidable.formidable();
-  let name: string;
+  const calls = collections.map((value) => {
+    if (existing.includes(value)) {
+      console.log(value);
+      return db.collection(value).drop();
+    }
 
-  const parser = parse({ columns: true }, async (err, records) => {
-    try {
-      const collection = db.collection(name);
+    return Promise.resolve(`${value} doesn't exist`);
+  });
 
-      if (name in db.listCollections()) {
-        await collection.drop(); // TODO only remove when indicated
-      }
-
-      const result = await collection.insertMany(records);
-
-      console.log(`Inserted ${result.insertedCount} docs`);
-
+  Promise.allSettled(calls)
+    .then(() => {
+      console.log("done");
       res.sendStatus(200);
-    } catch (e) {
+    })
+    .catch((e) => {
       console.log(e);
-
       res.sendStatus(500);
-    }
-  });
+    });
+}); */
 
-  form.parse(req, async (err, fields, files) => {
-    const { path, name: fooName } = files.data as File;
-
-    if (fooName == null || !fooName.endsWith(".csv")) {
-      res.sendStatus(400);
-      return;
-    }
-
-    name = fooName.slice(0, -4);
-
-    fs.createReadStream(path).pipe(parser);
-  });
-});
-
-app.get("/vote-options", async (req, res) => {
+/* app.get("/vote-options", async (req, res) => {
   try {
     const options = db.collection("public-vote-options");
     res.json(await options.find().toArray());
   } catch (e) {
     console.log(e);
   }
+}); */
+
+app.delete("/deleteTest", async (req, res) => {
+  const db = get();
+  if (!db) {
+    res.sendStatus(500);
+
+    return;
+  }
+
+  const voterKeys = db.collection(PUBLIC_VOTERS_KEYS);
+
+  const result = await voterKeys.deleteOne({ voterId: 9 });
+
+  console.log(`Deleted ${result.deletedCount} docs`);
+
+  res.status(200).json({ OK: `Deleted ${result.deletedCount} docs` });
 });
 
+/*
 app.post("/vote", async (req, res) => {
   const form = formidable.formidable();
 
@@ -112,7 +108,19 @@ app.post("/vote", async (req, res) => {
     }
   });
 });
+*/
 
-app.listen(port, () => {
-  console.log(`Example app listening at http://localhost:${port}`);
-});
+(async () => {
+  try {
+    await myDb.connect();
+
+    console.log("Connected to MongoDB");
+
+    app.listen(port, () => {
+      console.log(`Example app listening at http://localhost:${port}`);
+    });
+  } catch (e) {
+    console.log(`Unable to connect to MongoDB: ${e}`);
+    process.exit(1);
+  }
+})();
