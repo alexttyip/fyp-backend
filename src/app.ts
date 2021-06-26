@@ -4,6 +4,7 @@ import express from "express";
 
 import * as myDb from "./db";
 import { get } from "./db";
+import adminRouter from "./routers/admin";
 import uploadRouter from "./routers/upload";
 
 const app = express();
@@ -11,6 +12,7 @@ const port = process.env.PORT || 3000;
 
 const PUBLIC_VOTERS_KEYS = "public-voters-keys";
 
+app.use("/admin", adminRouter);
 app.use("/upload", uploadRouter);
 
 /* app.get("/drop", async (req, res) => {
@@ -110,17 +112,15 @@ app.post("/vote", async (req, res) => {
 });
 */
 
-(async () => {
-  try {
-    await myDb.connect();
-
+myDb
+  .connect()
+  .catch((e) => {
+    console.log(`Unable to connect to MongoDB: ${e}`);
+  })
+  .then(() => {
     console.log("Connected to MongoDB");
 
     app.listen(port, () => {
       console.log(`Example app listening at http://localhost:${port}`);
     });
-  } catch (e) {
-    console.log(`Unable to connect to MongoDB: ${e}`);
-    process.exit(1);
-  }
-})();
+  });
