@@ -3,17 +3,19 @@ import "dotenv/config";
 import express from "express";
 
 import * as myDb from "./db";
-import { get } from "./db";
+// import { get } from "./db";
 import adminRouter from "./routers/admin";
-import uploadRouter from "./routers/upload";
+// import uploadRouter from "./routers/upload";
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-const PUBLIC_VOTERS_KEYS = "public-voters-keys";
+// const PUBLIC_VOTERS_KEYS = "public-voters-keys";
+
+app.use(express.json());
 
 app.use("/admin", adminRouter);
-app.use("/upload", uploadRouter);
+// app.use("/upload", uploadRouter);
 
 /* app.get("/drop", async (req, res) => {
   const collections = [
@@ -66,6 +68,7 @@ app.use("/upload", uploadRouter);
   }
 }); */
 
+/*
 app.delete("/deleteTest", async (req, res) => {
   const db = get();
   if (!db) {
@@ -82,6 +85,7 @@ app.delete("/deleteTest", async (req, res) => {
 
   res.status(200).json({ OK: `Deleted ${result.deletedCount} docs` });
 });
+*/
 
 /*
 app.post("/vote", async (req, res) => {
@@ -121,6 +125,6 @@ myDb
     console.log("Connected to MongoDB");
 
     app.listen(port, () => {
-      console.log(`Example app listening at http://localhost:${port}`);
+      console.log(`App listening at http://localhost:${port}`);
     });
   });

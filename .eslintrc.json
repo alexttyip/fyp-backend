@@ -17,6 +17,7 @@
     "import/newline-after-import": "error",
     "import/no-duplicates": "error",
     "prettier/prettier": "error",
-    "import/extensions": "off"
+    "import/extensions": "off",
+    "no-plusplus": "off"
   }
 }
