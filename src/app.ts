@@ -5,6 +5,7 @@ import mongoose from "mongoose";
 
 // import { get } from "./db";
 import adminRouter from "./routers/admin";
+import voterRouter from "./routers/voter";
 // import uploadRouter from "./routers/upload";
 
 const app = express();
@@ -15,6 +16,7 @@ const port = process.env.PORT || 3000;
 app.use(express.json());
 
 app.use("/admin", adminRouter);
+app.use("/voter", voterRouter);
 // app.use("/upload", uploadRouter);
 
 /* app.get("/drop", async (req, res) => {

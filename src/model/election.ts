@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose, { Schema } from "mongoose";
 
 const electionSchema = new mongoose.Schema({
   name: {
@@ -13,6 +13,12 @@ const electionSchema = new mongoose.Schema({
   q: String,
   numberOfTellers: Number,
   thresholdTellers: Number,
+  voters: [
+    {
+      type: Schema.Types.ObjectId,
+      ref: "Voter",
+    },
+  ],
 });
 
 export const Election = mongoose.model("Election", electionSchema);
