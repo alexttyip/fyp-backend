@@ -97,7 +97,7 @@ send_user -- "- Create Election Keys -------------------------------------------
 execute_vmv "create-election-keys --election public-election-params.csv --output election-keys-$teller.csv --publish public-election-keys-$teller.csv --teller $teller\r"
 upload "election-keys-$teller.csv" 0
 upload "public-election-keys-$teller.csv" 0
-#
+
 # # If this is teller 1, create the voters' keys and tracker numbers.
 # if {$teller == 1} {
 #   send_user -- "- Create Voter Keys -----------------------------------------------------------------------------------------\n"

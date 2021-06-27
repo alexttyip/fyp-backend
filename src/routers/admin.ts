@@ -1,18 +1,39 @@
+import { spawn } from "child_process";
+import csv from "csvtojson";
 import express from "express";
+import * as fs from "fs";
+import { homedir } from "os";
 
-const fs = require("fs");
-const { spawn } = require("child_process");
+import { Election } from "../model/election";
 
-const homeDir = require("os").homedir();
+const homeDir = homedir();
 
 const projDir = `${homeDir}/vmv-android-server`;
 
 const router = express.Router();
 
 router.post("/init", async (req, res) => {
-  const { election } = req.body;
+  const { electionName } = req.body;
 
-  fs.mkdirSync(`${homeDir}/elections/${election}`);
+  if (!electionName) {
+    res.status(400).send("Must provide election name");
+    return;
+  }
+
+  if (await Election.exists({ name: electionName })) {
+    res.status(400).send("Election exists");
+    return;
+  }
+
+  try {
+    await Election.create({ name: electionName });
+    res.sendStatus(201);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json(e);
+  }
+
+  fs.mkdirSync(`${homeDir}/elections/${electionName}`);
 
   const getParams = (teller: number) => {
     const params = [
@@ -21,7 +42,7 @@ router.post("/init", async (req, res) => {
       `${homeDir}/.ssh/id_ed25519`,
       "localhost",
       "expect",
-      election,
+      electionName,
       4,
       3,
       teller,
@@ -38,14 +59,30 @@ router.post("/init", async (req, res) => {
   };
 
   let numTellersDone: number = 0;
+  let hasError: boolean = false;
 
-  const closeFunc = (code: number, i: number) => {
+  const stdoutFunc = (data: string, i: number) => {
+    console.log(`Teller ${i} stdout: ${data}`);
+  };
+
+  const stderrFunc = (data: string, i: number) => {
+    console.error(`Teller ${i} stderr: ${data}`);
+    hasError = true;
+  };
+
+  const closeFunc = async (code: number, i: number) => {
     console.log(`Teller ${i} exited with code ${code}`);
 
     numTellersDone++;
 
-    if (numTellersDone >= 4) {
-      res.sendStatus(200);
+    if (numTellersDone >= 4 && !hasError) {
+      const [csvObj] = await csv().fromFile(
+        `${homeDir}/elections/${electionName}/public-election-params.csv`
+      );
+
+      console.log(csvObj);
+
+      await Election.updateOne({ name: electionName }, csvObj);
     }
   };
 
@@ -54,13 +91,9 @@ router.post("/init", async (req, res) => {
 
     const vmv = spawn(`${projDir}/election_initialisation.exp`, params);
 
-    vmv.stdout.on("data", (data: string) => {
-      console.log(`Teller ${i} stdout: ${data}`);
-    });
+    vmv.stdout.on("data", (data: string) => stdoutFunc(data, i));
 
-    vmv.stderr.on("data", (data: string) => {
-      console.error(`Teller ${i} stderr: ${data}`);
-    });
+    vmv.stderr.on("data", (data: string) => stderrFunc(data, i));
 
     vmv.on("close", (code: number) => closeFunc(code, i));
   }
