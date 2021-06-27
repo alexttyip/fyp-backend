@@ -1,7 +1,6 @@
 import express from "express";
 
-import { Election } from "../model/election";
-import { Voter } from "../model/voter";
+import { Election, Voter } from "../model";
 
 const router = express.Router();
 

@@ -10,4 +10,4 @@ const voterSchema = new mongoose.Schema({
   publicKeyTrapdoor: String,
 });
 
-export const Voter = mongoose.model("Voter", voterSchema);
+export default mongoose.model("Voter", voterSchema);

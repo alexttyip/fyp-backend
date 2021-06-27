@@ -3,9 +3,9 @@ import "dotenv/config";
 import express from "express";
 import mongoose from "mongoose";
 
+import { adminRouter, voterRouter } from "./routers";
+
 // import { get } from "./db";
-import adminRouter from "./routers/admin";
-import voterRouter from "./routers/voter";
 // import uploadRouter from "./routers/upload";
 
 const app = express();

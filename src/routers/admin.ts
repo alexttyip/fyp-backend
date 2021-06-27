@@ -4,7 +4,7 @@ import express from "express";
 import * as fs from "fs";
 import { homedir } from "os";
 
-import { Election } from "../model/election";
+import { Election } from "../model";
 
 const homeDir = homedir();
 

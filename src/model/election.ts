@@ -21,4 +21,4 @@ const electionSchema = new mongoose.Schema({
   ],
 });
 
-export const Election = mongoose.model("Election", electionSchema);
+export default mongoose.model("Election", electionSchema);
