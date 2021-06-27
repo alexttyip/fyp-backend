@@ -12,8 +12,20 @@ const projDir = `${homeDir}/vmv-android-server`;
 
 const router = express.Router();
 
+interface InitReqBody {
+  electionName: string;
+  numberOfTellers: number;
+  thresholdTellers: number;
+  voters: number[];
+}
+
 router.post("/init", async (req, res) => {
-  const { electionName } = req.body;
+  const {
+    electionName,
+    numberOfTellers,
+    thresholdTellers,
+    voters,
+  }: InitReqBody = req.body;
 
   if (!electionName) {
     res.status(400).send("Must provide election name");
@@ -35,7 +47,7 @@ router.post("/init", async (req, res) => {
 
   fs.mkdirSync(`${homeDir}/elections/${electionName}`);
 
-  const getParams = (teller: number) => {
+  const getParams = (teller: number): string[] => {
     const params = [
       homeDir,
       `${projDir}/vmv-1.1.1.jar`,
@@ -43,8 +55,8 @@ router.post("/init", async (req, res) => {
       "localhost",
       "expect",
       electionName,
-      4,
-      3,
+      numberOfTellers,
+      thresholdTellers,
       teller,
       "127.0.0.1",
       8080 + teller,
@@ -52,10 +64,16 @@ router.post("/init", async (req, res) => {
     ];
 
     if (teller === 1) {
-      return params.concat([10, "ers-voters.csv", "ers-associated-voters.csv"]);
+      return <string[]>(
+        params.concat([
+          voters.length,
+          "ers-voters.csv",
+          "ers-associated-voters.csv",
+        ])
+      );
     }
 
-    return params;
+    return <string[]>params;
   };
 
   let numTellersDone: number = 0;
