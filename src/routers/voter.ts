@@ -1,35 +1,61 @@
 import express from "express";
+import { body, validationResult } from "express-validator";
 
 import { Election, Voter } from "../model";
 
 const router = express.Router();
 
-router.post("/uploadKeys", async (req, res) => {
-  const {
-    electionName,
-    voterId,
-    publicKeySignature,
-    publicKeyTrapdoor,
-  } = req.body;
+interface UploadKeysReqBody {
+  electionName: string;
+  voterId: number;
+  publicKeySignature: string;
+  publicKeyTrapdoor: string;
+}
 
-  const election = await Election.findOne({ name: electionName }).exec();
+/**
+ * Voter upload their generated keys
+ */
+router.post(
+  "/uploadKeys",
+  body("electionName").notEmpty(),
+  body("voterId").notEmpty(),
+  body("publicKeySignature").notEmpty(),
+  body("publicKeyTrapdoor").notEmpty(),
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res.status(400).json({ errors: errors.array() });
+      return;
+    }
 
-  if (!election) {
-    res.status(500).send("Election does not exist");
-    return;
+    const {
+      electionName,
+      voterId,
+      publicKeySignature,
+      publicKeyTrapdoor,
+    }: UploadKeysReqBody = req.body;
+
+    if (!(await Election.exists({ name: electionName }))) {
+      res.status(500).send("Election does not exist");
+      return;
+    }
+
+    try {
+      await Voter.findOneAndUpdate(
+        { electionName, voterId },
+        {
+          publicKeySignature,
+          publicKeyTrapdoor,
+        },
+        { upsert: true }
+      );
+
+      res.sendStatus(201);
+    } catch (e) {
+      console.error(e);
+      res.status(500).send(e);
+    }
   }
-
-  const voter = await Voter.create({
-    voterId,
-    publicKeySignature,
-    publicKeyTrapdoor,
-    election,
-  });
-
-  election.voters.push(voter);
-  await election.save();
-
-  res.sendStatus(201);
-});
+);
 
 export default router;
