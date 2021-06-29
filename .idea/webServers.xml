@@ -3,7 +3,7 @@
   <component name="WebServers">
     <option name="servers">
       <webServer id="43466d41-768f-42d3-9c13-5d1f142b1751" name="vmv-android-server">
-        <fileTransfer rootFolder="/home/alex" accessType="SFTP" host="188.166.147.51" port="22" sshConfigId="9f9696cd-f8c8-45f4-bceb-1ca6bc108b3b" sshConfig="alex@188.166.147.51:22 agent" authAgent="true">
+        <fileTransfer rootFolder="/home/alex" accessType="SFTP" host="snapfile.tech" port="22" sshConfigId="9f9696cd-f8c8-45f4-bceb-1ca6bc108b3b" sshConfig="alex@snapfile.tech:22 agent" authAgent="true">
           <advancedOptions>
             <advancedOptions dataProtectionLevel="Private" keepAliveTimeout="0" passiveMode="true" shareSSLContext="true" />
           </advancedOptions>

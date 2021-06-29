@@ -126,6 +126,7 @@ mongoose
     useNewUrlParser: true,
     useUnifiedTopology: true,
     useCreateIndex: true,
+    useFindAndModify: false,
   })
   .catch((reason) => {
     console.error("Unable to connect to the database:", reason);

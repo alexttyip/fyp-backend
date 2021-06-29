@@ -23,4 +23,8 @@ const voterSchema = new Schema<VoterInterface>(
   { timestamps: { createdAt: "createdAt", updatedAt: "updatedAt" } }
 );
 
+voterSchema.methods.isFilled = function (): boolean {
+  return !!(this.publicKeySignature && this.publicKeyTrapdoor);
+};
+
 export default mongoose.model("Voter", voterSchema);

@@ -1,0 +1,85 @@
+#!/usr/bin/expect --
+
+# Include common script.
+source election_common.exp
+
+# Define values from the command line.
+if {[llength $argv] < 12} {
+  send_user "Usage: election_init_post_voters_keys.exp vmv_far_file ssh_key_file sftp_host sftp_user \"election_name\" number_of_tellers threshold_tellers teller teller_ip teller_main_port teller_hint_port \[number_of_voters\] \[\"ers_voters_file\"\] \[\"ers_associated_voters_file\"\]\n"
+  exit 1
+}
+
+set home_dir [lindex $argv 0]
+set jar [lindex $argv 1]
+set ssh_key_file [lindex $argv 2]
+set sftp_host [lindex $argv 3]
+set sftp_user [lindex $argv 4]
+set election_name [lindex $argv 5]
+set number_of_tellers [lindex $argv 6]
+set threshold_tellers [lindex $argv 7] # TODO can remove
+set teller [lindex $argv 8]
+set teller_ip [lindex $argv 9]
+set teller_main_port [lindex $argv 10]
+set teller_hint_port [lindex $argv 11]
+
+if {$teller == 1} {
+  if {[llength $argv] < 15} {
+    send_user "Usage: election_init_post_voters_keys.exp vmv_far_file ssh_key_file sftp_host sftp_user \"election_name\" number_of_tellers threshold_tellers teller teller_ip teller_main_port teller_hint_port number_of_voters \"ers_voters_file\" \"ers_associated_voters_file\"\n"
+    exit 1
+  }
+
+  set number_of_voters [lindex $argv 12] # TODO can remove
+  set ers_voters [lindex $argv 13]
+  set ers_associated_voters [lindex $argv 14]
+}
+
+# Start.
+send_user "Election: $election_name\n"
+send_user "Tellers: $number_of_tellers with a threshold of $threshold_tellers\n"
+send_user "Teller: $teller $teller_ip $teller_main_port $teller_hint_port\n"
+
+if {$teller == 1} {
+  send_user "Voters: $number_of_voters\n"
+  send_user "Voters Import File: $ers_voters\n"
+  send_user "Voters Export File: $ers_associated_voters\n"
+}
+
+cd "$home_dir/elections/$election_name"
+
+# If this is teller 1, upload the voters' keys.
+if {$teller == 1} {
+  send_user -- "- Upload Voter Keys -----------------------------------------------------------------------------------------\n"
+  upload "public-voters-keys.csv" 0
+}
+
+# # Create commitments.
+# send_user -- "- Create Commitments ------------------------------------------------------------------------------------------\n"
+# download "public-voters-keys.csv"
+# execute_vmv "create-commitments --election public-election-params.csv public-election-keys-$teller.csv --voters public-voters-keys.csv --tracker-numbers shuffled-tracker-numbers-$teller.csv --output commitments-$teller.csv --publish public-commitments-$teller.csv commitments-proofs-$teller.csv\r"
+# upload "commitments-$teller.csv" 0
+# upload "public-commitments-$teller.csv" 0
+# upload "commitments-proofs-$teller.csv" 0
+#
+# # Decrypt commitments.
+# send_user -- "- Decrypt Commitments -----------------------------------------------------------------------------------------\n"
+# set index 1
+# set files ""
+# while {$index <= $number_of_tellers} {
+#   set file "public-commitments-$index.csv"
+#   append files "$file "
+#   download $file
+#   set index [expr $index+1]
+# }
+# execute_vmv "decrypt-commitments --election public-election-params.csv election-keys-$teller.csv --voters public-voters-keys.csv --tracker-numbers shuffled-tracker-numbers-$teller.csv --commitments $files --publish public-voters-$teller.csv decrypt-proofs-$teller.zip --teller $teller\r"
+# upload "public-voters-$teller.csv" 0
+# upload "decrypt-proofs-$teller.zip" 0
+#
+# # If this is teller 1, associate the generated data with voters.
+# if {$teller == 1} {
+#   send_user -- "- Associate Voters ------------------------------------------------------------------------------------------\n"
+# # exec cp "../$ers_voters" ers-voters.csv
+#   execute_vmv "associate-voters --election public-election-params.csv public-election-keys-$teller.csv --voters public-voters-$teller.csv ers-voters.csv --output ers-associated-voters.csv --publish public-associated-voters.csv\r"
+# # exec cp ers-associated-voters.csv "../$ers_associated_voters"
+#   upload "public-associated-voters.csv" 0
+# }
+#

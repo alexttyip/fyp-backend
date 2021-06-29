@@ -1,11 +1,12 @@
 import { spawn } from "child_process";
+import { createObjectCsvWriter } from "csv-writer";
 import csv from "csvtojson";
 import express from "express";
 import { body, validationResult } from "express-validator";
 import * as fs from "fs";
 import { homedir } from "os";
 
-import { Election } from "../model";
+import { Election, Voter } from "../model";
 
 const homeDir = homedir();
 
@@ -120,7 +121,17 @@ router.post(
 
         console.log(csvObj);
 
-        await Election.updateOne({ name: electionName }, csvObj);
+        await Promise.all([
+          Election.updateOne({ name: electionName }, csvObj).exec(),
+          Voter.create(
+            voters.map((voterId) => ({
+              voterId,
+              electionName,
+            }))
+          ),
+        ]);
+
+        console.log("Init done");
       }
     };
 
@@ -137,5 +148,102 @@ router.post(
     }
   }
 );
+
+router.post("/test", async (req, res) => {
+  const voters = await Voter.find().exec();
+
+  console.log(voters);
+
+  console.log(typeof voters[0]);
+
+  res.sendStatus(200);
+});
+
+/**
+ * VMV actions post-generation of voters' keys
+ */
+router.post(
+  "/postVotersKeys",
+  body("electionName").notEmpty(),
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res.status(400).json({ errors: errors.array() });
+      return;
+    }
+
+    const { electionName }: { electionName: string } = req.body;
+
+    const [election, voters] = await Promise.all([
+      Election.findOne({ name: electionName }).exec(),
+      Voter.find({
+        electionName,
+      })
+        .sort("voterId")
+        .exec(),
+    ]);
+
+    const { numberOfVoters } = election;
+
+    if (
+      voters.some((val: any) => !val.isFilled()) ||
+      voters.length < numberOfVoters
+    ) {
+      res.status(400).send("Not all voters are registered");
+      return;
+    }
+
+    if (voters.length > numberOfVoters) {
+      res.status(400).send("Extra voters");
+      return;
+    }
+
+    // Generate public-voters-keys.csv
+    const publicVotersKeys = createObjectCsvWriter({
+      path: `${homeDir}/elections/${electionName}/public-voters-keys.csv`,
+      header: [
+        { id: "publicKeySignature", title: "publicKeySignature" },
+        { id: "publicKeyTrapdoor", title: "publicKeyTrapdoor" },
+      ],
+    });
+
+    // Generate ers-voters.csv
+    const ersVoters = createObjectCsvWriter({
+      path: `${homeDir}/elections/${electionName}/ers-voters.csv`,
+      header: [
+        { id: "voterId", title: "id" },
+        { id: "publicKeySignature", title: "publicKeySignature" },
+        { id: "publicKeyTrapdoor", title: "publicKeyTrapdoor" },
+      ],
+    });
+
+    try {
+      await Promise.all([
+        publicVotersKeys.writeRecords(voters),
+        ersVoters.writeRecords(voters),
+      ]);
+    } catch (e) {
+      res.status(500).json({
+        message: "Unable to generate CSV files",
+        error: e,
+      });
+
+      return;
+    }
+
+    console.log("Generated CSV files");
+
+    // TODO spawn VMV
+
+    res.status(200).send(voters);
+  }
+);
+
+router.delete("/clear", async (req, res) => {
+  await Voter.deleteMany();
+  await Election.deleteMany();
+
+  res.sendStatus(200);
+});
 
 export default router;

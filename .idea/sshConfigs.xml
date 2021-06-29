@@ -2,7 +2,7 @@
 <project version="4">
   <component name="SshConfigs">
     <configs>
-      <sshConfig authType="OPEN_SSH" host="188.166.147.51" id="9f9696cd-f8c8-45f4-bceb-1ca6bc108b3b" port="22" nameFormat="DESCRIPTIVE" username="alex" />
+      <sshConfig authType="OPEN_SSH" host="snapfile.tech" id="9f9696cd-f8c8-45f4-bceb-1ca6bc108b3b" port="22" nameFormat="DESCRIPTIVE" username="alex" />
     </configs>
   </component>
 </project>
