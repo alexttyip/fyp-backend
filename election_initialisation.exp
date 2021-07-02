@@ -48,8 +48,10 @@ if {$teller == 1} {
   }
 
   set number_of_voters [lindex $argv 12]
-  set ers_voters [lindex $argv 13] # TODO can remove
-  set ers_associated_voters [lindex $argv 14] # TODO can remove
+  # TODO can remove
+  set ers_voters [lindex $argv 13]
+  # TODO can remove
+  set ers_associated_voters [lindex $argv 14]
 }
 
 # Start.

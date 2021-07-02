@@ -1,5 +1,5 @@
 import express from "express";
-import { body, validationResult } from "express-validator";
+import { body, param, validationResult } from "express-validator";
 
 import { Election, Voter } from "../model";
 
@@ -11,6 +11,38 @@ interface UploadKeysReqBody {
   publicKeySignature: string;
   publicKeyTrapdoor: string;
 }
+
+router.get(
+  "/getElectionParams/:electionName",
+  param("electionName").notEmpty(),
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res.status(400).json({ errors: errors.array() });
+      return;
+    }
+
+    const { electionName } = req.params as any;
+
+    try {
+      const election = await Election.findOne({ name: electionName }).exec();
+
+      if (!election) {
+        res.status(400).send("Election does not exist");
+        return;
+      }
+
+      const { g, p, q } = election;
+      res.status(200).json({
+        g,
+        p,
+        q,
+      });
+    } catch (e) {
+      res.status(500).json(e);
+    }
+  }
+);
 
 /**
  * Voter upload their generated keys
