@@ -85,13 +85,7 @@ router.post(
       ];
 
       if (teller === 1) {
-        return <string[]>(
-          params.concat([
-            voters.length,
-            "ers-voters.csv",
-            "ers-associated-voters.csv",
-          ])
-        );
+        return <string[]>params.concat([voters.length]);
       }
 
       return <string[]>params;
@@ -232,7 +226,6 @@ router.post(
         "expect",
         electionName,
         numberOfTellers,
-        0, // TODO remove
         teller,
         "127.0.0.1",
         8080 + teller,
@@ -240,11 +233,9 @@ router.post(
       ];
 
       if (teller === 1) {
-        return <string[]>params.concat([
-          "", // TODO remove
-          "ers-voters.csv",
-          "ers-associated-voters.csv",
-        ]);
+        return <string[]>(
+          params.concat(["ers-voters.csv", "ers-associated-voters.csv"])
+        );
       }
 
       return <string[]>params;

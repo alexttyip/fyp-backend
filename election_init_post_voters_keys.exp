@@ -4,8 +4,8 @@
 source election_common.exp
 
 # Define values from the command line.
-if {[llength $argv] < 12} {
-  send_user "Usage: election_init_post_voters_keys.exp vmv_far_file ssh_key_file sftp_host sftp_user \"election_name\" number_of_tellers threshold_tellers teller teller_ip teller_main_port teller_hint_port \[number_of_voters\] \[\"ers_voters_file\"\] \[\"ers_associated_voters_file\"\]\n"
+if {[llength $argv] < 11} {
+  send_user "Usage: election_init_post_voters_keys.exp vmv_far_file ssh_key_file sftp_host sftp_user \"election_name\" number_of_tellers teller teller_ip teller_main_port teller_hint_port \[\"ers_voters_file\"\] \[\"ers_associated_voters_file\"\]\n"
   exit 1
 }
 
@@ -16,32 +16,27 @@ set sftp_host [lindex $argv 3]
 set sftp_user [lindex $argv 4]
 set election_name [lindex $argv 5]
 set number_of_tellers [lindex $argv 6]
-# TODO can remove
-set threshold_tellers [lindex $argv 7]
-set teller [lindex $argv 8]
-set teller_ip [lindex $argv 9]
-set teller_main_port [lindex $argv 10]
-set teller_hint_port [lindex $argv 11]
+set teller [lindex $argv 7]
+set teller_ip [lindex $argv 8]
+set teller_main_port [lindex $argv 9]
+set teller_hint_port [lindex $argv 10]
 
 if {$teller == 1} {
-  if {[llength $argv] < 15} {
-    send_user "Usage: election_init_post_voters_keys.exp vmv_far_file ssh_key_file sftp_host sftp_user \"election_name\" number_of_tellers threshold_tellers teller teller_ip teller_main_port teller_hint_port number_of_voters \"ers_voters_file\" \"ers_associated_voters_file\"\n"
+  if {[llength $argv] < 13} {
+    send_user "Usage: election_init_post_voters_keys.exp vmv_far_file ssh_key_file sftp_host sftp_user \"election_name\" number_of_tellers teller teller_ip teller_main_port teller_hint_port \"ers_voters_file\" \"ers_associated_voters_file\"\n"
     exit 1
   }
 
-  # TODO can remove
-  set number_of_voters [lindex $argv 12]
-  set ers_voters [lindex $argv 13]
-  set ers_associated_voters [lindex $argv 14]
+  set ers_voters [lindex $argv 11]
+  set ers_associated_voters [lindex $argv 12]
 }
 
 # Start.
 send_user "Election: $election_name\n"
-send_user "Tellers: $number_of_tellers with a threshold of $threshold_tellers\n"
+send_user "Tellers: $number_of_tellers\n"
 send_user "Teller: $teller $teller_ip $teller_main_port $teller_hint_port\n"
 
 if {$teller == 1} {
-  send_user "Voters: $number_of_voters\n"
   send_user "Voters Import File: $ers_voters\n"
   send_user "Voters Export File: $ers_associated_voters\n"
 }
