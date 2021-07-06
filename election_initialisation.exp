@@ -107,3 +107,14 @@ download "public-tracker-numbers.csv"
 execute_vmv "shuffle-tracker-numbers --election public-election-params.csv --tracker-numbers public-tracker-numbers.csv --publish shuffled-tracker-numbers-$teller.csv shuffle-proofs-$teller.zip --teller $teller\r"
 upload "shuffled-tracker-numbers-$teller.csv" 0
 upload "shuffle-proofs-$teller.zip" 0
+
+# Map vote options.
+if {$teller == 1} {
+  send_user -- "- Map Vote Options --------------------------------------------------------------------------------------------\n"
+  execute_vmv "map-vote-options --election public-election-params.csv --vote-options ers-vote-options.csv --publish public-vote-options.csv\r"
+  upload "ers-vote-options.csv" 0
+  upload "public-vote-options.csv" 0
+}
+
+download "ers-vote-options.csv"
+download "public-vote-options.csv"

@@ -5,7 +5,7 @@ source election_common.exp
 
 # Define values from the command line.
 if {[llength $argv] < 11} {
-  send_user "Usage: election_init_post_voters_keys.exp vmv_far_file ssh_key_file sftp_host sftp_user \"election_name\" number_of_tellers teller teller_ip teller_main_port teller_hint_port \[\"ers_voters_file\"\] \[\"ers_associated_voters_file\"\]\n"
+  send_user "Usage: election_init_post_voters_keys.exp vmv_far_file ssh_key_file sftp_host sftp_user \"election_name\" number_of_tellers teller teller_ip teller_main_port teller_hint_port\n"
   exit 1
 }
 
@@ -21,25 +21,10 @@ set teller_ip [lindex $argv 8]
 set teller_main_port [lindex $argv 9]
 set teller_hint_port [lindex $argv 10]
 
-if {$teller == 1} {
-  if {[llength $argv] < 13} {
-    send_user "Usage: election_init_post_voters_keys.exp vmv_far_file ssh_key_file sftp_host sftp_user \"election_name\" number_of_tellers teller teller_ip teller_main_port teller_hint_port \"ers_voters_file\" \"ers_associated_voters_file\"\n"
-    exit 1
-  }
-
-  set ers_voters [lindex $argv 11]
-  set ers_associated_voters [lindex $argv 12]
-}
-
 # Start.
 send_user "Election: $election_name\n"
 send_user "Tellers: $number_of_tellers\n"
 send_user "Teller: $teller $teller_ip $teller_main_port $teller_hint_port\n"
-
-if {$teller == 1} {
-  send_user "Voters Import File: $ers_voters\n"
-  send_user "Voters Export File: $ers_associated_voters\n"
-}
 
 cd "$home_dir/elections/$election_name"
 
@@ -74,8 +59,6 @@ upload "decrypt-proofs-$teller.zip" 0
 # If this is teller 1, associate the generated data with voters.
 if {$teller == 1} {
   send_user -- "- Associate Voters ------------------------------------------------------------------------------------------\n"
-# exec cp "../$ers_voters" ers-voters.csv
   execute_vmv "associate-voters --election public-election-params.csv public-election-keys-$teller.csv --voters public-voters-$teller.csv ers-voters.csv --output ers-associated-voters.csv --publish public-associated-voters.csv\r"
-# exec cp ers-associated-voters.csv "../$ers_associated_voters"
   upload "public-associated-voters.csv" 0
 }

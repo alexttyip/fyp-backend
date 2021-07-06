@@ -9,7 +9,6 @@ import { homedir } from "os";
 import { Election, Voter } from "../model";
 
 const homeDir = homedir();
-
 const projDir = `${homeDir}/vmv-android-server`;
 
 const router = express.Router();
@@ -19,6 +18,7 @@ interface InitReqBody {
   numberOfTellers: number;
   thresholdTellers: number;
   voters: number[];
+  voteOptions: string[];
 }
 
 /**
@@ -30,6 +30,7 @@ router.post(
   body("numberOfTellers").isInt(),
   body("thresholdTellers").isInt(),
   body("voters").isArray(),
+  body("voteOptions").isArray(),
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -42,6 +43,7 @@ router.post(
       numberOfTellers,
       thresholdTellers,
       voters,
+      voteOptions,
     }: InitReqBody = req.body;
 
     if (!electionName) {
@@ -58,7 +60,9 @@ router.post(
       await Election.create({
         name: electionName,
         numberOfVoters: voters.length,
+        voteOptions: voteOptions.map((option) => ({ option })),
       });
+
       res.sendStatus(201);
     } catch (e) {
       console.error(e);
@@ -67,6 +71,28 @@ router.post(
     }
 
     fs.mkdirSync(`${homeDir}/elections/${electionName}`);
+
+    // Generate ers-vote-options.csv
+    const ersVoteOptions = createObjectCsvWriter({
+      path: `${homeDir}/elections/${electionName}/ers-vote-options.csv`,
+      header: [
+        { id: "option", title: "option" },
+        { id: "optionNumberInGroup", title: "optionNumberInGroup" },
+      ],
+    });
+
+    try {
+      await ersVoteOptions.writeRecords(
+        voteOptions.map((option) => ({ option }))
+      );
+    } catch (e) {
+      res.status(500).json({
+        message: "Unable to generate CSV files",
+        error: e,
+      });
+
+      return;
+    }
 
     const getParams = (teller: number): string[] => {
       const params = [
@@ -217,8 +243,8 @@ router.post(
 
     console.log("Generated CSV files");
 
-    const getParams = (teller: number): string[] => {
-      const params = [
+    const getParams = (teller: number): string[] =>
+      <string[]>[
         homeDir,
         `${projDir}/vmv-1.1.1.jar`,
         `${homeDir}/.ssh/id_ed25519`,
@@ -231,15 +257,6 @@ router.post(
         8080 + teller,
         4040 + teller,
       ];
-
-      if (teller === 1) {
-        return <string[]>(
-          params.concat(["ers-voters.csv", "ers-associated-voters.csv"])
-        );
-      }
-
-      return <string[]>params;
-    };
 
     let numTellersDone: number = 0;
     let hasError: boolean = false;

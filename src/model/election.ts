@@ -19,6 +19,12 @@ const electionSchema = new Schema(
     q: String,
     numberOfTellers: Number,
     thresholdTellers: Number,
+    voteOptions: [
+      {
+        option: String,
+        optionNumberInGroup: String,
+      },
+    ],
   },
   { timestamps: { createdAt: "createdAt", updatedAt: "updatedAt" } }
 );
