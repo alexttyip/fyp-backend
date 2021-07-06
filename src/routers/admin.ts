@@ -60,7 +60,7 @@ router.post(
       await Election.create({
         name: electionName,
         numberOfVoters: voters.length,
-        voteOptions: voteOptions.map((option) => ({ option })),
+        // voteOptions: voteOptions.map((option) => ({ option })),
       });
 
       res.sendStatus(201);
@@ -135,14 +135,20 @@ router.post(
       numTellersDone++;
 
       if (numTellersDone >= 4 && !hasError) {
-        const [csvObj] = await csv().fromFile(
-          `${homeDir}/elections/${electionName}/public-election-params.csv`
-        );
-
-        console.log(csvObj);
+        const [params, publicVoteOptions] = await Promise.all([
+          csv().fromFile(
+            `${homeDir}/elections/${electionName}/public-election-params.csv`
+          ),
+          csv().fromFile(
+            `${homeDir}/elections/${electionName}/public-vote-options.csv`
+          ),
+        ]);
 
         await Promise.all([
-          Election.updateOne({ name: electionName }, csvObj).exec(),
+          Election.updateOne(
+            { name: electionName },
+            { ...params[0], voteOptions: publicVoteOptions }
+          ).exec(),
           Voter.create(
             voters.map((voterId) => ({
               voterId,

@@ -32,11 +32,12 @@ router.get(
         return;
       }
 
-      const { g, p, q } = election;
+      const { g, p, q, voteOptions } = election;
       res.status(200).json({
         g,
         p,
         q,
+        voteOptions,
       });
     } catch (e) {
       res.status(500).json(e);
