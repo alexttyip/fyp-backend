@@ -7,9 +7,9 @@ const router = express.Router();
 
 interface UploadKeysReqBody {
   electionName: string;
-  voterId: number;
   publicKeySignature: string;
   publicKeyTrapdoor: string;
+  deviceId: string;
 }
 
 router.get(
@@ -32,12 +32,12 @@ router.get(
         return;
       }
 
-      const { g, p, q, voteOptions } = election;
+      const { g, p, q, electionPublicKey } = election;
       res.status(200).json({
         g,
         p,
         q,
-        voteOptions,
+        electionPublicKey,
       });
     } catch (e) {
       res.status(500).json(e);
@@ -51,9 +51,9 @@ router.get(
 router.post(
   "/uploadKeys",
   body("electionName").notEmpty(),
-  body("voterId").notEmpty(),
   body("publicKeySignature").notEmpty(),
   body("publicKeyTrapdoor").notEmpty(),
+  body("deviceId").notEmpty(),
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -63,9 +63,9 @@ router.post(
 
     const {
       electionName,
-      voterId,
       publicKeySignature,
       publicKeyTrapdoor,
+      deviceId,
     }: UploadKeysReqBody = req.body;
 
     if (!(await Election.exists({ name: electionName }))) {
@@ -73,15 +73,18 @@ router.post(
       return;
     }
 
+    // Assign voterId depending on number of existing voters.
+    // 1-based
+    const voterId = (await Voter.countDocuments({ electionName }).exec()) + 1;
+
     try {
-      await Voter.findOneAndUpdate(
-        { electionName, voterId },
-        {
-          publicKeySignature,
-          publicKeyTrapdoor,
-        },
-        { upsert: true }
-      );
+      await Voter.create({
+        electionName,
+        publicKeySignature,
+        publicKeyTrapdoor,
+        deviceId,
+        voterId,
+      });
 
       res.sendStatus(201);
     } catch (e) {

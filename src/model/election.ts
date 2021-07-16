@@ -19,6 +19,7 @@ const electionSchema = new Schema(
     q: String,
     numberOfTellers: Number,
     thresholdTellers: Number,
+    electionPublicKey: String,
     voteOptions: [
       {
         option: String,

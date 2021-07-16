@@ -56,20 +56,6 @@ router.post(
       return;
     }
 
-    try {
-      await Election.create({
-        name: electionName,
-        numberOfVoters: voters.length,
-        // voteOptions: voteOptions.map((option) => ({ option })),
-      });
-
-      res.sendStatus(201);
-    } catch (e) {
-      console.error(e);
-      res.status(500).json(e);
-      return;
-    }
-
     fs.mkdirSync(`${homeDir}/elections/${electionName}`);
 
     // Generate ers-vote-options.csv
@@ -93,6 +79,8 @@ router.post(
 
       return;
     }
+
+    res.sendStatus(202);
 
     const getParams = (teller: number): string[] => {
       const params = [
@@ -135,27 +123,18 @@ router.post(
       numTellersDone++;
 
       if (numTellersDone >= 4 && !hasError) {
-        const [params, publicVoteOptions] = await Promise.all([
-          csv().fromFile(
-            `${homeDir}/elections/${electionName}/public-election-params.csv`
-          ),
-          csv().fromFile(
-            `${homeDir}/elections/${electionName}/public-vote-options.csv`
-          ),
+        const dir = `${homeDir}/elections/${electionName}`;
+        const [params, electionKeys] = await Promise.all([
+          csv().fromFile(`${dir}/public-election-params.csv`),
+          csv().fromFile(`${dir}/public-election-keys.csv`),
         ]);
 
-        await Promise.all([
-          Election.updateOne(
-            { name: electionName },
-            { ...params[0], voteOptions: publicVoteOptions }
-          ).exec(),
-          Voter.create(
-            voters.map((voterId) => ({
-              voterId,
-              electionName,
-            }))
-          ),
-        ]);
+        await Election.create({
+          name: electionName,
+          numberOfVoters: voters.length,
+          electionPublicKey: electionKeys[0].publicKey,
+          ...params[0],
+        });
 
         console.log("Init done");
       }
@@ -192,25 +171,18 @@ router.post(
 
     const [election, voters] = await Promise.all([
       Election.findOne({ name: electionName }).exec(),
-      Voter.find({
-        electionName,
-      })
-        .sort("voterId")
-        .exec(),
+      Voter.find({ electionName }).sort("voterId").exec(),
     ]);
 
     const { numberOfVoters, numberOfTellers } = election;
 
-    if (
-      voters.some((val: any) => !val.isFilled()) ||
-      voters.length < numberOfVoters
-    ) {
+    if (voters.length < numberOfVoters) {
       res.status(400).send("Not all voters are registered");
       return;
     }
 
     if (voters.length > numberOfVoters) {
-      res.status(400).send("Extra voters");
+      res.status(400).send("Too many voters");
       return;
     }
 
@@ -262,6 +234,7 @@ router.post(
         "127.0.0.1",
         8080 + teller,
         4040 + teller,
+        numberOfVoters,
       ];
 
     let numTellersDone: number = 0;
@@ -282,6 +255,28 @@ router.post(
       numTellersDone++;
 
       if (numTellersDone >= 4 && !hasError) {
+        const dir = `${homeDir}/elections/${electionName}`;
+        const [associatedVoters, publicVoteOptions] = await Promise.all([
+          csv().fromFile(`${dir}/ers-associated-voters.csv`),
+          csv().fromFile(`${dir}/public-vote-options.csv`),
+        ]);
+
+        const newVoters = associatedVoters.map(
+          ({ beta, id: voterId, encryptedTrackerNumberInGroup }) =>
+            Voter.updateOne(
+              { electionName, voterId },
+              { beta, encryptedTrackerNumberInGroup }
+            ).exec()
+        );
+
+        await Promise.all([
+          ...newVoters,
+          Election.updateOne(
+            { name: electionName },
+            { voteOptions: publicVoteOptions }
+          ).exec(),
+        ]);
+
         console.log("Post-Voter Keys done");
       }
     };

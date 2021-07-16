@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "nodemon",
-    "start": "node dist/app.js",
+    "start": "pm2 start src/app.ts --node-args=\"--require dotenv/config\" --watch",
     "postinstall": "tsc",
     "prepare": "husky install"
   },

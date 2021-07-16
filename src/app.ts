@@ -1,5 +1,3 @@
-import "dotenv/config";
-
 import express from "express";
 import mongoose from "mongoose";
 
@@ -128,13 +126,14 @@ mongoose
     useCreateIndex: true,
     useFindAndModify: false,
   })
-  .catch((reason) => {
-    console.error("Unable to connect to the database:", reason);
-  })
   .then(() => {
     console.log("Connected to DB");
 
     app.listen(port, () => {
       console.log(`App listening at http://localhost:${port}`);
     });
+  })
+  .catch((reason) => {
+    console.error("Unable to connect to the database:", reason);
+    console.error(uri);
   });

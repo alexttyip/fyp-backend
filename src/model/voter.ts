@@ -1,14 +1,21 @@
 import mongoose, { Schema } from "mongoose";
 
 interface VoterInterface extends mongoose.Document {
+  deviceId: string;
   voterId: number;
   electionName: string;
   publicKeySignature: string;
   publicKeyTrapdoor: string;
+  beta: string;
+  encryptedTrackerNumberInGroup: string;
 }
 
 const voterSchema = new Schema<VoterInterface>(
   {
+    deviceId: {
+      type: String,
+      required: true,
+    },
     voterId: {
       type: Number,
       required: true,
@@ -19,12 +26,10 @@ const voterSchema = new Schema<VoterInterface>(
     },
     publicKeySignature: String,
     publicKeyTrapdoor: String,
+    beta: String,
+    encryptedTrackerNumberInGroup: String,
   },
   { timestamps: { createdAt: "createdAt", updatedAt: "updatedAt" } }
 );
-
-voterSchema.methods.isFilled = function (): boolean {
-  return !!(this.publicKeySignature && this.publicKeyTrapdoor);
-};
 
 export default mongoose.model("Voter", voterSchema);

@@ -78,7 +78,7 @@ if {$teller == 1} {
     download $file
     set index [expr $index+1]
   }
-  execute_vmv "encrypt-votes --election public-election-params.csv public-election-keys-$teller.csv --voters voters-keys.csv ers-plaintext-voters.csv --votes ers-vote-options.csv --commitments $files --output ers-encrypted-voters.csv --publish public-encrypted-voters.csv public-vote-options.csv encrypt-proofs.csv\r"
+  execute_vmv "encrypt-votes --election public-election-params.csv public-election-keys.csv --voters voters-keys.csv ers-plaintext-voters.csv --votes ers-vote-options.csv --commitments $files --output ers-encrypted-voters.csv --publish public-encrypted-voters.csv public-vote-options.csv encrypt-proofs.csv\r"
 
   exec cp ers-encrypted-voters.csv "../$ers_encrypted_voters"
   upload "public-encrypted-voters.csv" 0
@@ -90,6 +90,6 @@ if {$teller == 1} {
 send_user -- "- Mix Votes ---------------------------------------------------------------------------------------------------\n"
 download "public-encrypted-voters.csv"
 download "public-vote-options.csv"
-execute_vmv "mix-votes --election public-election-params.csv election-keys-$teller.csv --votes public-vote-options.csv --tracker-numbers public-tracker-numbers.csv --voters public-encrypted-voters.csv --publish public-mixed-voters-$teller.csv mix-proofs-$teller.zip --teller $teller\r"
+execute_vmv "mix-votes --election public-election-params.csv election-keys.csv --votes public-vote-options.csv --tracker-numbers public-tracker-numbers.csv --voters public-encrypted-voters.csv --publish public-mixed-voters-$teller.csv mix-proofs-$teller.zip --teller $teller\r"
 upload "public-mixed-voters-$teller.csv" 0
 upload "mix-proofs-$teller.zip" 0

@@ -90,31 +90,8 @@ execute_vmv "merge-teller --election public-election-params.csv --teller-informa
 
 # Create election keys.
 send_user -- "- Create Election Keys ----------------------------------------------------------------------------------------\n"
-execute_vmv "create-election-keys --election public-election-params.csv --output election-keys-$teller.csv --publish public-election-keys-$teller.csv --teller $teller\r"
-upload "election-keys-$teller.csv" 0
-upload "public-election-keys-$teller.csv" 0
-
-# If this is teller 1, create the voters' tracker numbers.
+execute_vmv "create-election-keys --election public-election-params.csv --output election-keys.csv --publish public-election-keys.csv --teller $teller\r"
 if {$teller == 1} {
-  send_user -- "- Create Tracker Numbers ------------------------------------------------------------------------------------\n"
-  execute_vmv "create-tracker-numbers --election public-election-params.csv public-election-keys-$teller.csv --number-of-voters $number_of_voters --publish public-tracker-numbers.csv\r"
-  upload "public-tracker-numbers.csv" 0
+  upload "election-keys.csv" 0
+  upload "public-election-keys.csv" 0
 }
-
-# Shuffle the tracker numbers.
-send_user -- "- Shuffle Tracker Numbers -------------------------------------------------------------------------------------\n"
-download "public-tracker-numbers.csv"
-execute_vmv "shuffle-tracker-numbers --election public-election-params.csv --tracker-numbers public-tracker-numbers.csv --publish shuffled-tracker-numbers-$teller.csv shuffle-proofs-$teller.zip --teller $teller\r"
-upload "shuffled-tracker-numbers-$teller.csv" 0
-upload "shuffle-proofs-$teller.zip" 0
-
-# Map vote options.
-if {$teller == 1} {
-  send_user -- "- Map Vote Options --------------------------------------------------------------------------------------------\n"
-  execute_vmv "map-vote-options --election public-election-params.csv --vote-options ers-vote-options.csv --publish public-vote-options.csv\r"
-  upload "ers-vote-options.csv" 0
-  upload "public-vote-options.csv" 0
-}
-
-download "ers-vote-options.csv"
-download "public-vote-options.csv"
