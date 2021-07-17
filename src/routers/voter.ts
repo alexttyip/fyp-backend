@@ -94,4 +94,34 @@ router.post(
   }
 );
 
+/**
+ * Voter get beta and encryptedTrackerNumberInGroup
+ */
+router.post(
+  "/getVoterParams",
+  body("electionName").notEmpty(),
+  body("deviceId").notEmpty(),
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res.status(400).json({ errors: errors.array() });
+      return;
+    }
+
+    const { electionName, deviceId } = req.body;
+
+    try {
+      const { beta, encryptedTrackerNumberInGroup } = await Voter.findOne(
+        { electionName, deviceId },
+        ["beta", "encryptedTrackerNumberInGroup"]
+      ).exec();
+
+      res.status(200).json({ beta, encryptedTrackerNumberInGroup });
+    } catch (e) {
+      console.error(e);
+      res.status(500).json(e);
+    }
+  }
+);
+
 export default router;
