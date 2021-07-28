@@ -98,7 +98,7 @@ router.post(
  * Voter get beta and encryptedTrackerNumberInGroup
  */
 router.post(
-  "/getVoterParams",
+  "/getVoterParamsAndOptions",
   body("electionName").notEmpty(),
   body("deviceId").notEmpty(),
   async (req, res) => {
@@ -111,12 +111,38 @@ router.post(
     const { electionName, deviceId } = req.body;
 
     try {
-      const { beta, encryptedTrackerNumberInGroup } = await Voter.findOne(
-        { electionName, deviceId },
-        ["beta", "encryptedTrackerNumberInGroup"]
-      ).exec();
+      const [voter, election] = await Promise.all([
+        Voter.findOne({ electionName, deviceId }, [
+          "beta",
+          "encryptedTrackerNumberInGroup",
+        ]).exec(),
+        Election.findOne({ name: electionName }, ["voteOptions"]).exec(),
+      ]);
 
-      res.status(200).json({ beta, encryptedTrackerNumberInGroup });
+      if (!voter) {
+        res.status(400).json({
+          code: "NO_SUCH_VOTER",
+        });
+
+        return;
+      }
+
+      const { beta, encryptedTrackerNumberInGroup } = voter;
+      const { voteOptions } = election;
+
+      if (!beta || !encryptedTrackerNumberInGroup || !voteOptions) {
+        res.status(400).json({
+          code: "ELECTION_NOT_STARTED",
+        });
+
+        return;
+      }
+
+      res.status(200).json({
+        beta,
+        encryptedTrackerNumberInGroup,
+        voteOptions,
+      });
     } catch (e) {
       console.error(e);
       res.status(500).json(e);

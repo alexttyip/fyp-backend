@@ -56,7 +56,12 @@ router.post(
       return;
     }
 
-    fs.mkdirSync(`${homeDir}/elections/${electionName}`);
+    try {
+      fs.mkdirSync(`${homeDir}/elections/${electionName}`);
+    } catch (e) {
+      res.status(500).send(e);
+      return;
+    }
 
     // Generate ers-vote-options.csv
     const ersVoteOptions = createObjectCsvWriter({
