@@ -1,16 +1,13 @@
 import mongoose, { Schema } from "mongoose";
 
-interface VoterInterface extends mongoose.Document {
-  deviceId: string;
-  voterId: number;
-  electionName: string;
-  publicKeySignature: string;
-  publicKeyTrapdoor: string;
-  beta: string;
-  encryptedTrackerNumberInGroup: string;
-}
+const encryptProofSchema = new Schema({
+  c1Bar: String,
+  c1R: String,
+  c2Bar: String,
+  c2R: String,
+});
 
-const voterSchema = new Schema<VoterInterface>(
+const voterSchema = new Schema(
   {
     deviceId: {
       type: String,
@@ -28,6 +25,9 @@ const voterSchema = new Schema<VoterInterface>(
     publicKeyTrapdoor: String,
     beta: String,
     encryptedTrackerNumberInGroup: String,
+    encryptedVote: String,
+    encryptedVoteSignature: String,
+    encryptProof: encryptProofSchema,
   },
   { timestamps: { createdAt: "createdAt", updatedAt: "updatedAt" } }
 );

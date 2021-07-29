@@ -150,4 +150,48 @@ router.post(
   }
 );
 
+/**
+ * Voter upload their encrypted vote
+ */
+router.post(
+  "/vote",
+  body("electionName").notEmpty(),
+  body("beta").notEmpty(),
+  body("encryptedVoteSignature").notEmpty(),
+  body("encryptProof.c1Bar").notEmpty(),
+  body("encryptProof.c1R").notEmpty(),
+  body("encryptProof.c2Bar").notEmpty(),
+  body("encryptProof.c2R").notEmpty(),
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res.status(400).json({ errors: errors.array() });
+      return;
+    }
+
+    const {
+      electionName,
+      beta,
+      encryptedVote,
+      encryptedVoteSignature,
+      encryptProof,
+    } = req.body;
+
+    const voter = await Voter.findOne({ electionName, beta }).exec();
+
+    if (!voter) {
+      res.status(400).send("Election and/or voter do not exist.");
+      return;
+    }
+
+    voter.encryptedVote = encryptedVote;
+    voter.encryptedVoteSignature = encryptedVoteSignature;
+    voter.encryptProof = encryptProof;
+
+    await voter.save();
+
+    res.sendStatus(200);
+  }
+);
+
 export default router;
