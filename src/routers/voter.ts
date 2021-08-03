@@ -194,4 +194,40 @@ router.post(
   }
 );
 
+/**
+ *
+ */
+router.post(
+  "/getAlphaAndTN",
+  body("electionName").notEmpty(),
+  body("beta").notEmpty(),
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res.status(400).json({ errors: errors.array() });
+      return;
+    }
+
+    const { electionName, beta } = req.body;
+
+    try {
+      const [election, voter] = await Promise.all([
+        Election.findOne({ electionName }, "trackerNumbers").exec(),
+        Voter.findOne({ electionName, beta }, "alpha").exec(),
+      ]);
+
+      if (!election || !voter) {
+        res.status(400).send("Election and/or voter does not exist.");
+        return;
+      }
+
+      res.status(200).json({
+        trackerNumbers: election.trackerNumbers,
+        alpha: voter.alpha,
+      });
+    } catch (e) {
+      res.sendStatus(500);
+    }
+  }
+);
 export default router;

@@ -23,8 +23,8 @@
 source election_common.exp
 
 # Define values from the command line.
-if {[llength $argv] < 7} {
-  send_user "Usage: election_encrypt.exp vmv_far_file ssh_key_file sftp_host sftp_user \"election_name\" number_of_tellers teller \[\"ers_plaintext_voters_file\"\] \[\"ers_encrypted_voters_file\"\]\n"
+if {[llength $argv] < 8} {
+  send_user "Usage: election_encrypt.exp vmv_var_file ssh_key_file sftp_host sftp_user \"election_name\" number_of_tellers teller home_dir\n"
   exit 1
 }
 
@@ -35,40 +35,24 @@ set sftp_user [lindex $argv 3]
 set election_name [lindex $argv 4]
 set number_of_tellers [lindex $argv 5]
 set teller [lindex $argv 6]
-
-if {$teller == 1} {
-  if {[llength $argv] < 9} {
-    send_user "Usage: election_encrypt.exp vmv_far_file ssh_key_file sftp_host sftp_user \"election_name\" number_of_tellers teller \"ers_plaintext_voters_file\" \"ers_encrypted_voters_file\"\n"
-    exit 1
-  }
-
-  set ers_plaintext_voters [lindex $argv 7]
-  set ers_encrypted_voters [lindex $argv 8]
-}
+set home_dir [lindex $argv 7]
 
 # Start.
 send_user "Election: $election_name\n"
 send_user "Tellers: $number_of_tellers\n"
 send_user "Teller: $teller\n"
 
-if {$teller == 1} {
-  send_user "Voters Plaintext Import File: $ers_plaintext_voters\n"
-  send_user "Voters Encrypted Export File: $ers_encrypted_voters\n"
-}
-
 # Make sure the election directory exists.
-if {![file exists $election_name]} {
+if {![file exists "$home_dir/elections/$election_name"]} {
   send_user "Election directory $election_name does not exist\n"
   exit 1
 }
 
-cd "$election_name"
+cd "$home_dir/elections/$election_name"
 
 # If this is teller 1, encrypt the plaintext votes.
 if {$teller == 1} {
   send_user -- "- Encrypt Votes -----------------------------------------------------------------------------------------------\n"
-  exec cp "../$ers_plaintext_voters" ers-plaintext-voters.csv
-  download voters-keys.csv
 
   set index 1
   set files ""
@@ -78,9 +62,8 @@ if {$teller == 1} {
     download $file
     set index [expr $index+1]
   }
-  execute_vmv "encrypt-votes --election public-election-params.csv public-election-keys.csv --voters voters-keys.csv ers-plaintext-voters.csv --votes ers-vote-options.csv --commitments $files --output ers-encrypted-voters.csv --publish public-encrypted-voters.csv public-vote-options.csv encrypt-proofs.csv\r"
+  execute_vmv "encrypt-votes --election public-election-params.csv public-election-keys.csv --voters ers-plaintext-voters.csv ers-encrypt-proofs.csv --votes public-vote-options.csv --commitments $files --output ers-encrypted-voters.csv --publish public-encrypted-voters.csv public-vote-options.csv encrypt-proofs.csv\r"
 
-  exec cp ers-encrypted-voters.csv "../$ers_encrypted_voters"
   upload "public-encrypted-voters.csv" 0
   upload "public-vote-options.csv" 0
   upload "encrypt-proofs.csv" 0

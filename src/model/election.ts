@@ -26,6 +26,13 @@ const electionSchema = new Schema(
         optionNumberInGroup: String,
       },
     ],
+    trackerNumbers: [
+      {
+        encryptedTrackerNumberInGroup: String,
+        trackerNumber: String,
+        trackerNumberInGroup: String,
+      },
+    ],
   },
   { timestamps: { createdAt: "createdAt", updatedAt: "updatedAt" } }
 );

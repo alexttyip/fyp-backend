@@ -30,6 +30,12 @@ send_user "Election: $election_name\n"
 send_user "Tellers: $number_of_tellers\n"
 send_user "Teller: $teller $teller_ip $teller_main_port $teller_hint_port\n"
 
+# Make sure the election directory exists.
+if {![file exists $home_dir/elections/$election_name]} {
+  send_user "Election directory $election_name does not exist\n"
+  exit 1
+}
+
 cd "$home_dir/elections/$election_name"
 
 # If this is teller 1, upload the voters' keys and create the voters' tracker numbers.

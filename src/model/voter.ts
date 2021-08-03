@@ -28,6 +28,7 @@ const voterSchema = new Schema(
     encryptedVote: String,
     encryptedVoteSignature: String,
     encryptProof: encryptProofSchema,
+    alpha: String,
   },
   { timestamps: { createdAt: "createdAt", updatedAt: "updatedAt" } }
 );

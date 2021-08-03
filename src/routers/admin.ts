@@ -1,7 +1,7 @@
 import { spawn } from "child_process";
 import { createObjectCsvWriter } from "csv-writer";
 import csv from "csvtojson";
-import express from "express";
+import express, { Request } from "express";
 import { body, validationResult } from "express-validator";
 import * as fs from "fs";
 import { homedir } from "os";
@@ -17,9 +17,53 @@ interface InitReqBody {
   electionName: string;
   numberOfTellers: number;
   thresholdTellers: number;
-  voters: number[];
+  numVoters: number;
   voteOptions: string[];
 }
+
+interface CheckNumVoterResult {
+  error: string;
+  electionName: string;
+  election: any;
+  voters: any[];
+}
+
+const checkNumVoters = async (req: Request): Promise<CheckNumVoterResult> => {
+  const result: CheckNumVoterResult = {
+    error: "",
+    electionName: "",
+    election: {},
+    voters: [],
+  };
+
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    result.error = JSON.stringify({ errors: errors.array() });
+    return result;
+  }
+
+  const { electionName }: { electionName: string } = req.body;
+
+  // Generate CSV files
+  const [election, voters] = await Promise.all([
+    Election.findOne({ name: electionName }).exec(),
+    Voter.find({ electionName }).sort("voterId").exec(),
+  ]);
+
+  const { numberOfVoters } = election;
+
+  if (voters.length < numberOfVoters) {
+    result.error = "Not all voters are registered";
+    return result;
+  }
+
+  if (voters.length > numberOfVoters) {
+    result.error = "Too many voters";
+    return result;
+  }
+
+  return { error: "", electionName, election, voters };
+};
 
 /**
  * Initialisation of VMV Election
@@ -29,7 +73,7 @@ router.post(
   body("electionName").notEmpty(),
   body("numberOfTellers").isInt(),
   body("thresholdTellers").isInt(),
-  body("voters").isArray(),
+  body("numVoters").isInt(),
   body("voteOptions").isArray(),
   async (req, res) => {
     const errors = validationResult(req);
@@ -42,14 +86,9 @@ router.post(
       electionName,
       numberOfTellers,
       thresholdTellers,
-      voters,
+      numVoters,
       voteOptions,
     }: InitReqBody = req.body;
-
-    if (!electionName) {
-      res.status(400).send("Must provide election name");
-      return;
-    }
 
     if (await Election.exists({ name: electionName })) {
       res.status(400).send("Election exists");
@@ -104,7 +143,7 @@ router.post(
       ];
 
       if (teller === 1) {
-        return <string[]>params.concat([voters.length]);
+        return <string[]>[...params, numVoters];
       }
 
       return <string[]>params;
@@ -136,7 +175,7 @@ router.post(
 
         await Election.create({
           name: electionName,
-          numberOfVoters: voters.length,
+          numberOfVoters: numVoters,
           electionPublicKey: electionKeys[0].publicKey,
           ...params[0],
         });
@@ -165,29 +204,16 @@ router.post(
 router.post(
   "/postVotersKeys",
   body("electionName").notEmpty(),
-  async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      res.status(400).json({ errors: errors.array() });
-      return;
-    }
+  async (req: Request, res) => {
+    const {
+      error,
+      electionName,
+      election: { numberOfTellers, numberOfVoters },
+      voters,
+    } = await checkNumVoters(req);
 
-    const { electionName }: { electionName: string } = req.body;
-
-    const [election, voters] = await Promise.all([
-      Election.findOne({ name: electionName }).exec(),
-      Voter.find({ electionName }).sort("voterId").exec(),
-    ]);
-
-    const { numberOfVoters, numberOfTellers } = election;
-
-    if (voters.length < numberOfVoters) {
-      res.status(400).send("Not all voters are registered");
-      return;
-    }
-
-    if (voters.length > numberOfVoters) {
-      res.status(400).send("Too many voters");
+    if (error) {
+      res.status(400).send(error);
       return;
     }
 
@@ -261,10 +287,12 @@ router.post(
 
       if (numTellersDone >= 4 && !hasError) {
         const dir = `${homeDir}/elections/${electionName}`;
-        const [associatedVoters, publicVoteOptions] = await Promise.all([
-          csv().fromFile(`${dir}/ers-associated-voters.csv`),
-          csv().fromFile(`${dir}/public-vote-options.csv`),
-        ]);
+        const [associatedVoters, publicVoteOptions, trackerNumbers] =
+          await Promise.all([
+            csv().fromFile(`${dir}/ers-associated-voters.csv`),
+            csv().fromFile(`${dir}/public-vote-options.csv`),
+            csv().fromFile(`${dir}/public-tracker-numbers.csv`),
+          ]);
 
         const newVoters = associatedVoters.map(
           ({ beta, id: voterId, encryptedTrackerNumberInGroup }) =>
@@ -278,7 +306,10 @@ router.post(
           ...newVoters,
           Election.updateOne(
             { name: electionName },
-            { voteOptions: publicVoteOptions }
+            {
+              voteOptions: publicVoteOptions,
+              trackerNumbers,
+            }
           ).exec(),
         ]);
 
@@ -301,7 +332,153 @@ router.post(
       vmv.on("close", (code: number) => closeFunc(code, i));
     }
 
-    res.status(200).send(voters);
+    res.sendStatus(200);
+  }
+);
+
+router.post(
+  "/encryptVotes",
+  body("electionName").notEmpty(),
+  async (req: Request, res) => {
+    const {
+      error,
+      electionName,
+      election: { numberOfTellers },
+      voters,
+    } = await checkNumVoters(req);
+
+    if (error) {
+      res.status(400).send(error);
+      return;
+    }
+
+    const { proofs, allVoted } = voters.reduce(
+      (acc: any, curr: any) => {
+        if (!acc.allVoted) return acc;
+
+        const proof = curr.encryptProof.toObject();
+
+        acc.proofs.push({
+          ...proof,
+          encryptedVoteSignature: curr.encryptedVoteSignature,
+        });
+        acc.allVoted &&=
+          curr.encryptedVote && curr.encryptedVoteSignature && proof;
+
+        return acc;
+      },
+      { proofs: [], allVoted: true }
+    );
+
+    if (!allVoted) {
+      res.status(400).send("Not all voters voted");
+      return;
+    }
+
+    // Generate ers-plaintext-voters.csv
+    const ersPlaintextVoters = createObjectCsvWriter({
+      path: `${homeDir}/elections/${electionName}/ers-plaintext-voters.csv`,
+      header: [
+        { id: "beta", title: "beta" },
+        { id: "encryptedVote", title: "encryptedVote" },
+        { id: "encryptedVoteSignature", title: "encryptedVoteSignature" },
+        { id: "voterId", title: "id" },
+        { id: "plainTextVote", title: "plainTextVote" },
+        {
+          id: "encryptedTrackerNumberInGroup",
+          title: "encryptedTrackerNumberInGroup",
+        },
+        { id: "publicKeySignature", title: "publicKeySignature" },
+        { id: "publicKeyTrapdoor", title: "publicKeyTrapdoor" },
+      ],
+    });
+
+    // Generate ers-encrypt-proofs.csv
+    const ersEncryptProofs = createObjectCsvWriter({
+      path: `${homeDir}/elections/${electionName}/ers-encrypt-proofs.csv`,
+      header: [
+        { id: "c1Bar", title: "c1Bar" },
+        { id: "c1R", title: "c1R" },
+        { id: "c2Bar", title: "c2Bar" },
+        { id: "c2R", title: "c2R" },
+        { id: "encryptedVoteSignature", title: "encryptedVoteSignature" },
+      ],
+    });
+
+    try {
+      await Promise.all([
+        ersPlaintextVoters.writeRecords(voters),
+        ersEncryptProofs.writeRecords(proofs),
+      ]);
+    } catch (e) {
+      res.status(500).json({
+        message: "Unable to generate CSV files",
+        error: e,
+      });
+
+      return;
+    }
+
+    console.log("Generated CSV files");
+
+    const getParams = (teller: number): string[] =>
+      <string[]>[
+        `${projDir}/vmv-1.1.1.jar`,
+        `${homeDir}/.ssh/id_ed25519`,
+        "localhost",
+        "expect",
+        electionName,
+        numberOfTellers,
+        teller,
+        homeDir,
+      ];
+
+    let numTellersDone: number = 0;
+    let hasError: boolean = false;
+
+    const stdoutFunc = (data: string, i: number) => {
+      console.log(`Teller ${i} stdout: ${data}`);
+    };
+
+    const stderrFunc = (data: string, i: number) => {
+      console.error(`Teller ${i} stderr: ${data}`);
+      hasError = true;
+    };
+
+    const closeFunc = async (code: number, i: number) => {
+      console.log(`Teller ${i} exited with code ${code}`);
+
+      numTellersDone++;
+
+      if (numTellersDone >= 4 && !hasError) {
+        const dir = `${homeDir}/elections/${electionName}`;
+        const encryptedVoters = await csv().fromFile(
+          `${dir}/ers-encrypted-voters.csv`
+        );
+
+        const newVoters = encryptedVoters.map(({ alpha, id: voterId }) =>
+          Voter.updateOne({ electionName, voterId }, { alpha }).exec()
+        );
+
+        await Promise.all(newVoters);
+
+        console.log("Encrypt Votes done");
+      }
+    };
+
+    for (let i = 1; i <= 4; i++) {
+      const params = getParams(i);
+
+      const vmv = spawn(`${projDir}/election_encrypt.exp`, params);
+
+      vmv.stdout.on("data", (data: string) => stdoutFunc(data, i));
+
+      vmv.stderr.on("data", (data: string) => stderrFunc(data, i));
+
+      vmv.on("close", (code: number) => closeFunc(code, i));
+    }
+
+    res.sendStatus(200);
   }
 );
 
