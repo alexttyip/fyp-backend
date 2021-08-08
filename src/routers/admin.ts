@@ -166,7 +166,7 @@ router.post(
 
       numTellersDone++;
 
-      if (numTellersDone >= 4 && !hasError) {
+      if (numTellersDone >= numberOfTellers && !hasError) {
         const dir = `${homeDir}/elections/${electionName}`;
         const [params, electionKeys] = await Promise.all([
           csv().fromFile(`${dir}/public-election-params.csv`),
@@ -184,7 +184,7 @@ router.post(
       }
     };
 
-    for (let i = 1; i <= 4; i++) {
+    for (let i = 1; i <= numberOfTellers; i++) {
       const params = getParams(i);
 
       const vmv = spawn(`${projDir}/election_initialisation.exp`, params);
@@ -285,7 +285,7 @@ router.post(
 
       numTellersDone++;
 
-      if (numTellersDone >= 4 && !hasError) {
+      if (numTellersDone >= numberOfTellers && !hasError) {
         const dir = `${homeDir}/elections/${electionName}`;
         const [associatedVoters, publicVoteOptions, trackerNumbers] =
           await Promise.all([
@@ -317,7 +317,7 @@ router.post(
       }
     };
 
-    for (let i = 1; i <= 4; i++) {
+    for (let i = 1; i <= numberOfTellers; i++) {
       const params = getParams(i);
 
       const vmv = spawn(
@@ -450,7 +450,7 @@ router.post(
 
       numTellersDone++;
 
-      if (numTellersDone >= 4 && !hasError) {
+      if (numTellersDone >= numberOfTellers && !hasError) {
         const dir = `${homeDir}/elections/${electionName}`;
         const encryptedVoters = await csv().fromFile(
           `${dir}/ers-encrypted-voters.csv`
@@ -466,7 +466,7 @@ router.post(
       }
     };
 
-    for (let i = 1; i <= 4; i++) {
+    for (let i = 1; i <= numberOfTellers; i++) {
       const params = getParams(i);
 
       const vmv = spawn(`${projDir}/election_encrypt.exp`, params);

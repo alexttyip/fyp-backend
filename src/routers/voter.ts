@@ -1,7 +1,11 @@
+import csv from "csvtojson";
 import express from "express";
 import { body, param, validationResult } from "express-validator";
+import { homedir } from "os";
 
 import { Election, Voter } from "../model";
+
+const homeDir = homedir();
 
 const router = express.Router();
 
@@ -28,16 +32,19 @@ router.get(
       const election = await Election.findOne({ name: electionName }).exec();
 
       if (!election) {
-        res.status(400).send("Election does not exist");
+        res.status(400).json({ code: "ELECTION_NOT_EXIST" });
         return;
       }
 
-      const { g, p, q, electionPublicKey } = election;
+      const { g, p, q, electionPublicKey, numberOfTellers, thresholdTellers } =
+        election;
       res.status(200).json({
         g,
         p,
         q,
         electionPublicKey,
+        numberOfTellers,
+        thresholdTellers,
       });
     } catch (e) {
       res.status(500).json(e);
@@ -212,12 +219,22 @@ router.post(
 
     try {
       const [election, voter] = await Promise.all([
-        Election.findOne({ electionName }, "trackerNumbers").exec(),
+        Election.findOne({ name: electionName }, "trackerNumbers").exec(),
         Voter.findOne({ electionName, beta }, "alpha").exec(),
       ]);
 
-      if (!election || !voter) {
-        res.status(400).send("Election and/or voter does not exist.");
+      if (!election) {
+        res.status(400).json({ code: "ELECTION_NOT_EXIST" });
+        return;
+      }
+
+      if (!voter) {
+        res.status(400).json({ code: "VOTER_NOT_EXIST" });
+        return;
+      }
+
+      if (!voter.alpha) {
+        res.status(400).json({ code: "ELECTION_NOT_ENDED" });
         return;
       }
 
@@ -226,8 +243,24 @@ router.post(
         alpha: voter.alpha,
       });
     } catch (e) {
-      res.sendStatus(500);
+      res.status(500).json(e);
     }
   }
 );
+
+router.get("/getMixedVoters/:electionName", async (req, res) => {
+  const { electionName } = req.params;
+
+  const dir = `${homeDir}/elections/${electionName}`;
+
+  try {
+    const voters = await csv().fromFile(`${dir}/public-mixed-voters-1.csv`);
+
+    res.status(200).json({ voters });
+  } catch (e) {
+    console.log({ e });
+    res.status(500).json(e);
+  }
+});
+
 export default router;
