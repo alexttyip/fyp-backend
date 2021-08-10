@@ -30,11 +30,10 @@ afterEach(async () => {
 
 describe("GET /voter/getElectionParams", () => {
   it("Uninitiated election should return 400", async () => {
-    const test = request(app).get(`/voter/getElectionParams/election_test`);
-
-    test.expect("Content-Type", /json/).expect(400);
-
-    const res = await test;
+    const res = await request(app)
+      .get(`/voter/getElectionParams/election_test`)
+      .expect("Content-Type", /json/)
+      .expect(400);
 
     expect(res.body).toMatchObject({ code: "ELECTION_NOT_EXIST" });
   });
@@ -56,11 +55,10 @@ describe("GET /voter/getElectionParams", () => {
       q: "123",
     });
 
-    const test = request(app).get(`/voter/getElectionParams/${electionName}`);
-
-    test.expect("Content-Type", /json/).expect(200);
-
-    const res = await test;
+    const res = await request(app)
+      .get(`/voter/getElectionParams/${electionName}`)
+      .expect("Content-Type", /json/)
+      .expect(200);
 
     expect(res.body).toMatchObject({
       g: "123",
