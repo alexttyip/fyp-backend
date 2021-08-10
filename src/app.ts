@@ -1,16 +1,8 @@
-import express from "express";
 import mongoose from "mongoose";
 
-import { adminRouter, voterRouter } from "./routers";
+import { createServer } from "./server";
 
-const app = express();
 const port = process.env.PORT || 3000;
-
-app.use(express.json());
-
-app.use("/admin", adminRouter);
-app.use("/voter", voterRouter);
-
 const { DB_USER, DB_PW, CLUSTER_URL, DB_NAME } = process.env;
 
 const uri = `mongodb+srv://${DB_USER}:${DB_PW}@${CLUSTER_URL}/${DB_NAME}?retryWrites=true&w=majority`;
@@ -23,6 +15,8 @@ mongoose
   })
   .then(() => {
     console.log("Connected to DB");
+
+    const app = createServer();
 
     app.listen(port, () => {
       console.log(`App listening at http://localhost:${port}`);
